@@ -1,0 +1,72 @@
+name: SecureDev AI - Static Audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      repository_url:
+        description: "Repositorio público HTTPS (github.com/owner/repo)"
+        required: true
+        type: string
+      ref:
+        description: "Rama o tag"
+        required: true
+        default: "main"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: securedev-audit-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout scanner (trusted code)
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install scanner dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@v0.2.3
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Install Gitleaks CLI
+        run: |
+          go install github.com/zricethezav/gitleaks/v8@v8.24.2
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+
+      - name: Run static audit
+        env:
+          REPOSITORY_URL: ${{ inputs.repository_url }}
+          REPOSITORY_REF: ${{ inputs.ref }}
+        run: |
+          python -m scanner.main \
+            --repo "$REPOSITORY_URL" \
+            --ref "$REPOSITORY_REF" \
+            --out output
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: securedev-ai-report-${{ github.run_id }}
+          path: output/
+          if-no-files-found: warn
+          retention-days: 7

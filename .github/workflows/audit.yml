@@ -49,33 +49,36 @@ jobs:
           FILE="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
           BASE_URL="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}"
 
-          echo "Descargando Trivy ${TRIVY_VERSION}..."
-
+          echo "Descargando Trivy..."
           curl -fL --retry 3 \
             "${BASE_URL}/${FILE}" \
             -o "/tmp/${FILE}"
 
           echo "Descargando checksums..."
-
           curl -fL --retry 3 \
             "${BASE_URL}/trivy_${TRIVY_VERSION}_checksums.txt" \
             -o /tmp/trivy_checksums.txt
 
           echo "Verificando integridad..."
+          cd /tmp
 
-          grep "${FILE}$" /tmp/trivy_checksums.txt \
+          grep -F "${FILE}" trivy_checksums.txt \
+            | grep -F "  ${FILE}" \
             | sha256sum -c -
 
+          echo "Extrayendo Trivy..."
           mkdir -p /tmp/trivy-install
 
           tar -xzf "/tmp/${FILE}" \
             -C /tmp/trivy-install
 
+          echo "Instalando Trivy..."
           sudo install /tmp/trivy-install/trivy \
             /usr/local/bin/trivy
 
-          echo "Versión instalada:"
+          echo "Verificando instalación..."
           trivy --version
+
 
 
 

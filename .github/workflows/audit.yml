@@ -140,15 +140,15 @@ jobs:
           SCANNER_CALLBACK_TOKEN: ${{ secrets.SCANNER_CALLBACK_TOKEN }}
           AUDIT_ID: ${{ inputs.audit_id }}
         run: |
-          if [ ! -f artifacts/report.json ]; then
-            echo "ERROR: No se encontró artifacts/report.json"
+          if [ ! -f output/report.json ]; then
+            echo "ERROR: No se encontró output/report.json"
             exit 1
           fi
 
           echo "Preparando resultados de auditoría..."
 
           jq -n \
-            --slurpfile report artifacts/report.json \
+            --slurpfile report output/report.json \
             '{status: "completed", report: $report[0]}' \
             > payload.json
 

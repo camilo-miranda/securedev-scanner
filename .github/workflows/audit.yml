@@ -107,6 +107,21 @@ jobs:
             --out output
 
 
+
+      - name: Verificar archivos generados
+        if: always()
+        run: |
+          echo "Contenido del directorio actual:"
+          ls -la
+
+          echo "Contenido de output:"
+          ls -la output/ || true
+
+          if [ -f output/report.json ]; then
+            echo "OK: report.json encontrado"
+          else
+            echo "ERROR: No se encontró output/report.json"
+          fi
       
 
       - name: Publicar informe como Artifact
@@ -118,7 +133,7 @@ jobs:
           retention-days: 7
           if-no-files-found: error
       
-      
+
       - name: Enviar resultados a SecureDev AI
         env:
           SECUREDEV_API_URL: ${{ secrets.SECUREDEV_API_URL }}

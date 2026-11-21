@@ -7,6 +7,10 @@ on:
         description: "Repositorio público HTTPS (github.com/owner/repo)"
         required: true
         type: string
+      audit_id:
+        description: "ID de auditoría de SecureDev AI"
+        required: true
+        type: string
       ref:
         description: "Rama o tag"
         required: true
@@ -102,11 +106,42 @@ jobs:
             --ref "$REPOSITORY_REF" \
             --out output
 
-      - name: Upload audit report
-        if: always()
+
+      
+
+      - name: Publicar informe como Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: securedev-ai-report-${{ github.run_id }}
-          path: output/
-          if-no-files-found: warn
+          name: securedev-report-${{ inputs.audit_id }}
+          path: artifacts/
           retention-days: 7
+          if-no-files-found: error
+      
+      - name: Enviar resultados a SecureDev AI
+        env:
+          SECUREDEV_API_URL: ${{ secrets.SECUREDEV_API_URL }}
+          SCANNER_CALLBACK_TOKEN: ${{ secrets.SCANNER_CALLBACK_TOKEN }}
+          AUDIT_ID: ${{ inputs.audit_id }}
+        run: |
+          if [ ! -f artifacts/report.json ]; then
+            echo "ERROR: No se encontró artifacts/report.json"
+            exit 1
+          fi
+
+          echo "Preparando resultados de auditoría..."
+
+          jq -n \
+            --slurpfile report artifacts/report.json \
+            '{status: "completed", report: $report[0]}' \
+            > payload.json
+
+          echo "Enviando informe a Cloudflare..."
+
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            "${SECUREDEV_API_URL}/api/audits/${AUDIT_ID}/results" \
+            --header "Authorization: Bearer ${SCANNER_CALLBACK_TOKEN}" \
+            --header "Content-Type: application/json" \
+            --data-binary @payload.json
+
+          echo "Informe enviado correctamente."

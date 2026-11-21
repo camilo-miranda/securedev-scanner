@@ -110,12 +110,14 @@ jobs:
       
 
       - name: Publicar informe como Artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: securedev-report-${{ inputs.audit_id }}
-          path: artifacts/
+          path: output/report.json
           retention-days: 7
           if-no-files-found: error
+      
       
       - name: Enviar resultados a SecureDev AI
         env:
